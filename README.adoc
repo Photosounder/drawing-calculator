@@ -88,7 +88,7 @@ i_loop:
     expr d a = i*r + t + p.x
     expr d b = i + t + p.y
     expr p.x = cos_tr_d2(a*tr-0.25) + cos_tr_d2(b*tr-0.25)
-    expr p.y = cos_tr_d2(a*tr) + gaussian(b)
+    expr p.y = cos_tr_d2(a*tr) + cos_tr_d2(b*tr)*0.1
 
     // Radius
     expr d rad = radm * (1 - (j / iter))
