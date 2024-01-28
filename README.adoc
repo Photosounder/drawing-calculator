@@ -2,7 +2,7 @@
 
 Here's what it does:
 
-- Enter an algorithm in https://github.com/Photosounder/rouziclib?tab=readme-ov-file#rlip-rouziclib-interpreted-programming[RLIP].
+- Enter an algorithm in https://github.com/Photosounder/rouziclib#rlip-rouziclib-interpreted-programming[RLIP].
 - Each time you call `symb` it adds a circle to a list of circles to draw. The first two arguments are the X-Y position, the next argument is the circle radius (same units as the position), and the next four arguments are red-green-blue-alpha in linear values in the 0 to 1 range.
 - The program just draws from that list of circles.
 
