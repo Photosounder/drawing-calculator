@@ -2,9 +2,9 @@
 
 Here's what it does:
 
-- Enter an algoritm in https://github.com/Photosounder/rouziclib?tab=readme-ov-file#rlip-rouziclib-interpreted-programming[RLIP]
-- Each time you call `symb` it adds a circle to a list of circles to draw
-- The program just draws from that list of circles
+- Enter an algorithm in https://github.com/Photosounder/rouziclib?tab=readme-ov-file#rlip-rouziclib-interpreted-programming[RLIP].
+- Each time you call `symb` it adds a circle to a list of circles to draw. The first two arguments are the X-Y position, the next argument is the circle radius (same units as the position), and the next four arguments are red-green-blue-alpha in linear values in the 0 to 1 range.
+- The program just draws from that list of circles.
 
 As with all my projects it depends on https://github.com/Photosounder/rouziclib[rouziclib] for all the heavy lifting so it needs to be in your include path.
 
@@ -19,7 +19,7 @@ The interface is zoomable as explained https://github.com/Photosounder/rouziclib
 
 ### Full screen
 
-By default the interface is full screen so that it seemlessly transitions from your desktop to the program. However you can press Alt-Return to switch between full screen or windowed mode.
+You can press Alt-Return to switch between full screen or windowed mode.
 
 ## Example formulas
 
