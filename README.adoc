@@ -27,29 +27,35 @@ You can press Alt-Return to switch between full screen or windowed mode.
 
 ### Bokeh 3D sphere
 
-This one creates a 3D sphere with bokeh. Adjust the knob for variable `k0` for how the dots spin up the sphere, `angle` to make it rotate and `k1` to adjust camera focus.
+This one creates a 3D sphere with bokeh with two coloured areas. Adjust the knob for variable `k0` for how the dots spin up the sphere, `angle` to make it rotate and `k1` to adjust camera focus.
+
+image::screenshot2.png[screenshot2.png,align="center"]
 
 ```
 d i = 0
 i_loop:
-  expr d north = (i-0.5)/2 
-  expr d west = i * k0 + 0.25 + angle
-  expr d p.x = cos_tr_d2(west) * cos_tr_d2(north)
+  expr d north = (i-0.5)/2
+  expr d west = (i * k0 + 0.25)%1
+  expr d westr = (west - angle)%1
+  expr d p.x = cos_tr_d2(westr) * cos_tr_d2(north)
   expr d p.y = cos_tr_d2(north-0.25)
-  expr d p.z = cos_tr_d2(west-0.25) * cos_tr_d2(north)
+  expr d p.z = cos_tr_d2(westr-0.25) * cos_tr_d2(north)
 
   expr d rad = abs(p.z-k1) * 0.02
-  expr d mul = .00003/sq(rad)
+  expr d m = .00003/sq(rad)
+  expr m = m*erfr(p.z*3)
 
   // Colours
-  expr d red = 0.2 * mul
-  expr d grn = 0.2 * mul
-  expr d blu = 0.8 * mul
+  expr d spot_a = 8*exp(-sqadd((north-0.1)*40, (west-0.3)*20))
+  expr d spot_b = exp(-sqadd((north+0.05)*20, (west-0.5)*20))
+  expr d red = 0.13*m + spot_a*m + spot_b*4*m
+  expr d grn = (0.13 + spot_a)*m (1 - spot_b)^20 + spot_b*.04*m
+  expr d blu = (0.5 + spot_b)*m (1 - spot_b)^20 + spot_b*.04*m
 
   // Draw symbol
   d v = symb p.x p.y rad red grn blu 1
 
-  i = add i .001
+  i = add i .0008
 i i_cond = cmp i <= 1
 if i_cond goto i_loop
 return 0
@@ -60,12 +66,14 @@ return 0
 
 Adapted from https://x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
 
+image::screenshot3.png[screenshot3.png,align="center"]
+
 ```
-d num_curves = 256
-d iter = 200
+d num_curves = 512
+d iter = 400
 d t = k0
 d alpha = 1
-d radm = 0.01
+d radm = 0.004
 d r = 2pi/235
 d tr = 1/(2pi)
 
@@ -87,7 +95,7 @@ i_loop:
 
     // Colour
     expr d red = sq(i / num_curves)
-    expr d grn = sq(j / iter)
+    expr d grn = sq(0.5+0.5*cos_tr_d2(j/200+0.25))
     expr d blu = sq(1-(i/num_curves+j/iter)/2)
 
     // Draw symbol
@@ -98,7 +106,7 @@ i_loop:
   i j_cond = cmp j < iter
   if j_cond goto j_loop
 
-  i = add i 4
+  i = add i 3.86
 i i_cond = cmp i < num_curves
 if i_cond goto i_loop
 return 0
