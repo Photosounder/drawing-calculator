@@ -1,3 +1,5 @@
+:toc:
+
 # Michel Rouzic's drawing calculator
 
 Here's what it does:
