@@ -1,0 +1,103 @@
+# Michel Rouzic's drawing calculator
+
+Here's what it does:
+
+- Enter an algoritm in https://github.com/Photosounder/rouziclib?tab=readme-ov-file#rlip-rouziclib-interpreted-programming[RLIP]
+- Each time you call `symb` it adds a circle to a list of circles to draw
+- The program just draws from that list of circles
+
+As with all my projects it depends on https://github.com/Photosounder/rouziclib[rouziclib] for all the heavy lifting so it needs to be in your include path.
+
+:imagesdir: img
+image::screenshot1.png[screenshot1.png,align="center"]
+
+## Usage
+
+### How to zoom
+
+The interface is zoomable as explained https://github.com/Photosounder/rouziclib-picture-viewer#zooming[here]. Basically by clicking the middle mouse button you enter the zoom-scroll mode so you can zoom (using the scroll wheel) and adjust the selection with more precision. You exit that mode by clicking the middle mouse button again or better yet reset the view by holding the middle mouse button for at least half a second.
+
+### Full screen
+
+By default the interface is full screen so that it seemlessly transitions from your desktop to the program. However you can press Alt-Return to switch between full screen or windowed mode.
+
+## Example formulas
+
+### Bokeh 3D sphere
+
+This one creates a 3D sphere with bokeh. Adjust the knob for variable `k0` for how the dots spin up the sphere, `angle` to make it rotate and `k1` to adjust camera focus.
+
+```
+d i = 0
+i_loop:
+  expr d north = (i-0.5)/2 
+  expr d west = i * k0 + 0.25 + angle
+  expr d p.x = cos_tr_d2(west) * cos_tr_d2(north)
+  expr d p.y = cos_tr_d2(north-0.25)
+  expr d p.z = cos_tr_d2(west-0.25) * cos_tr_d2(north)
+
+  expr d rad = abs(p.z-k1) * 0.02
+  expr d mul = .00003/sq(rad)
+
+  // Colours
+  expr d red = 0.2 * mul
+  expr d grn = 0.2 * mul
+  expr d blu = 0.8 * mul
+
+  // Draw symbol
+  d v = symb p.x p.y rad red grn blu 1
+
+  i = add i .001
+i i_cond = cmp i <= 1
+if i_cond goto i_loop
+return 0
+
+```
+
+### Bubble universe
+
+Adapted from x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
+
+```
+d num_curves = 256
+d iter = 200
+d t = k0
+d alpha = 1
+d radm = 0.01
+d r = 2pi/235
+d tr = 1/(2pi)
+
+d i = 0
+i_loop:
+  d p.x = 0
+  d p.y = 0
+
+  d j = 0
+  j_loop:
+    // Position
+    expr d a = i*r + t + p.x
+    expr d b = i + t + p.y
+    expr p.x = cos_tr_d2(a*tr-0.25) + cos_tr_d2(b*tr-0.25)
+    expr p.y = cos_tr_d2(a*tr) + gaussian(b)
+
+    // Radius
+    expr d rad = radm * (1 - (j / iter))
+
+    // Colour
+    expr d red = sq(i / num_curves)
+    expr d grn = sq(j / iter)
+    expr d blu = sq(1-(i/num_curves+j/iter)/2)
+
+    // Draw symbol
+    d v = symb p.x p.y rad red grn blu alpha
+
+    j_end:
+    inc1 j
+  i j_cond = cmp j < iter
+  if j_cond goto j_loop
+
+  i = add i 4
+i i_cond = cmp i < num_curves
+if i_cond goto i_loop
+return 0
+```
