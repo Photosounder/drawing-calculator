@@ -58,7 +58,7 @@ return 0
 
 ### Bubble universe
 
-Adapted from x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
+Adapted from https://x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
 
 ```
 d num_curves = 256
