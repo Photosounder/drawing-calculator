@@ -91,7 +91,7 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 {
 	buffer_t comp_log={0};
 	rlip_inputs_t inputs[] = {
-		RLIP_REAL_DOUBLEDOUBLE, RLIP_FUNC, {"symb", drawcalc_symbol_add, "fdddddddd"}, {"angle", &d->angle_v, "pd"},
+		RLIP_FUNC, {"symb", drawcalc_symbol_add, "fdddddddd"}, {"angle", &d->angle_v, "pd"},
 		{"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
 	};
@@ -240,12 +240,10 @@ void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc
 	static gui_layout_t layout={0};
 	const char *layout_src[] = {
 		"v 1	0;3	0", "v 2	0	-0;2", "",
-		"elem 0", "type none", "label Position calculator parameters", "pos	-3;1	-1", "dim	7;11	6;5", "off	0	1", "",
+		"elem 0", "type none", "label Position calculator parameters", "pos	-3;1	-1", "dim	5;9	6;5", "off	0	1", "",
 		"elem 1", "type none", "label Position calculator parameters", "pos	0;1	-1", "dim	4;9	6;5", "off	0	1", "",
 		"elem 10", "type rect", "pos	0;1	-1;9", "dim	2;11	5;5", "off	1", "",
 		"elem 20", "type rect", "link_pos_id 80._b", "pos	v2", "dim	2;1	3;3", "off	0	1", "",
-		"elem 30", "type rect", "link_pos_id 80.rt", "pos	v1", "dim	1;11	2;4", "off	0	1", "",
-		"elem 60", "type rect", "link_pos_id 30._b", "pos	v2", "dim	1;11	2;8", "off	0	1", "",
 		"elem 80", "type rect", "link_pos_id 10.rt", "pos	v1", "dim	2;1	2", "off	0	1", "",
 	};
 
