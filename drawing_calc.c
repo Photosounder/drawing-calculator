@@ -1,4 +1,6 @@
+#ifndef DRAWCALC_AS_A_LIBRARY
 #include "rl.h"
+#endif
 
 typedef struct
 {
@@ -327,6 +329,7 @@ void drawing_calculator()
 	window_register(1, drawcalc_window, NULL, RECTNAN, NULL, 4, d, &form_string, &form_ret, &calc_form_detached);
 }
 
+#ifndef DRAWCALC_AS_A_LIBRARY
 void main_loop()
 {
 	sdl_main_param_t param={0};
@@ -350,3 +353,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#endif
