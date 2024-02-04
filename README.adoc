@@ -111,3 +111,38 @@ i i_cond = cmp i < num_curves
 if i_cond goto i_loop
 return 0
 ```
+
+### Graphing calculator
+
+Naturally you can simply loop through a variable `x`, calculate a `y` from it, and for each iteration of `x` draw a circle at (`x`, `y`).
+
+image::screenshot4.png[screenshot4.png,align="center"]
+
+```
+// Circle colour
+d m = 0.1
+d rb = mul m 0.1
+d g = mul m 0.8
+
+d x = -40
+loop_x:
+  d y = 0
+
+  // Loop through frequencies and sum them to y
+  d freq = 0
+  loop_freq:
+    expr y = y + cos_tr_d2(x*freq)*erfr(freq*k0-k1)
+  freq = add freq 0.01
+  i c_freq = cmp freq < 0.5
+  if c_freq goto loop_freq
+
+  // Control vertical scale
+  y = mul y 0.5
+
+  // Draw the circle
+  d v = symb x y .04 rb g rb 1
+x = add x 0.005
+i c_x = cmp x < 40
+if c_x goto loop_x
+return 0
+```
