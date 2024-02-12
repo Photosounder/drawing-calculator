@@ -146,3 +146,36 @@ i c_x = cmp x < 40
 if c_x goto loop_x
 return 0
 ```
+
+### Palette generation
+
+I needed to create a 256-colour palette for some data visualisation so I experimented with colouring a grid of circles until I was happy with the formula.
+
+image::screenshot5.png[screenshot5.png,align="center"]
+
+```
+d i = 0
+i_loop:
+  expr d t = (255-i)*0.2
+  expr d m = sqrt(i/255)
+
+  // Colours
+  expr d red = (1-abs(cos_tr_d2(0.16 * t-0.25))) * m
+  expr d grn = (1-abs(cos_tr_d2(0.02 * t -0.25))) * (i/255)
+  expr d blu = (1-abs(cos_tr_d2(0.15 * t-0.25))) * m
+
+  // Draw palette
+  expr d p.x = i%16
+  expr d p.y = floor(i/16)
+  d v = symb p.x p.y 0.46 red grn blu 1
+
+  // Draw side graph
+  p.x = mad red 8 16.5
+  p.y = mad blu 8 3
+  v = symb p.x p.y 0.08 red grn blu 1
+
+  i = add i 1
+i i_cond = cmp i < 256
+if i_cond goto i_loop
+return 0
+```
