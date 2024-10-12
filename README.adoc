@@ -1,6 +1,6 @@
 :toc:
 
-# Michel Rouzic's drawing calculator
+= Michel Rouzic's drawing calculator
 
 Here's what it does:
 
@@ -13,19 +13,19 @@ As with all my projects it depends on https://github.com/Photosounder/rouziclib[
 :imagesdir: img
 image::screenshot1.png[screenshot1.png,align="center"]
 
-## Usage
+== Usage
 
-### How to zoom
+=== How to zoom
 
 The interface is zoomable as explained https://github.com/Photosounder/rouziclib-picture-viewer#zooming[here]. Basically by clicking the middle mouse button you enter the zoom-scroll mode so you can zoom (using the scroll wheel) and adjust the selection with more precision. You exit that mode by clicking the middle mouse button again or better yet reset the view by holding the middle mouse button for at least half a second.
 
-### Full screen
+=== Full screen
 
 You can press Alt-Return to switch between full screen or windowed mode.
 
-## Example formulas
+== Example formulas
 
-### Bokeh 3D sphere
+=== Bokeh 3D sphere
 
 This one creates a 3D sphere with bokeh with two coloured areas. Adjust the knob for variable `k0` for how the dots spin up the sphere, `angle` to make it rotate and `k1` to adjust camera focus.
 
@@ -62,7 +62,7 @@ return 0
 
 ```
 
-### Bubble universe
+=== Bubble universe
 
 Adapted from https://x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
 
@@ -112,7 +112,7 @@ if i_cond goto i_loop
 return 0
 ```
 
-### Graphing calculator
+=== Graphing calculator
 
 Naturally you can simply loop through a variable `x`, calculate a `y` from it, and for each iteration of `x` draw a circle at (`x`, `y`).
 
@@ -147,7 +147,7 @@ if c_x goto loop_x
 return 0
 ```
 
-### Palette generation
+=== Palette generation
 
 I needed to create a 256-colour palette for some data visualisation so I experimented with colouring a grid of circles until I was happy with the formula.
 
