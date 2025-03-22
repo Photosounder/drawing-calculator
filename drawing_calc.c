@@ -2,11 +2,34 @@
 #include "rl.h"
 #endif
 
-typedef struct
+typedef enum
+{
+	type_line,
+	type_circle
+} symb_type_t;
+
+struct line
+{
+	xy_t p0, p1;
+	double blur;
+	frgb_t col;
+};
+
+struct circle
 {
 	xy_t pos;
 	double radius;
 	frgb_t col;
+};
+
+typedef struct
+{
+	symb_type_t type;
+	union
+	{
+		struct line line;
+		struct circle circle;
+	} symb;
 } drawcalc_symbol_t;
 
 typedef struct
@@ -78,13 +101,34 @@ void drawcalc_compilation_log(char *comp_log)
 
 _Thread_local rlip_t drawcalc_prog={0};
 
-double drawcalc_symbol_add(double x, double y, double radius, double r, double g, double b, double a)
+size_t drawcalc_alloc_elem()
 {
 	size_t i = drawcalc.symbol0_count;
 	alloc_enough_mutex(&drawcalc.symbol0, drawcalc.symbol0_count+=1, &drawcalc.symbol0_as, sizeof(drawcalc_symbol_t), 1.4, &drawcalc.array_mutex);
-	drawcalc.symbol0[i].pos = xy(x, y);
-	drawcalc.symbol0[i].radius = radius;
-	drawcalc.symbol0[i].col = make_colour_frgb(r, g, b, a);
+	return i;
+}
+
+double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur, double r, double g, double b)
+{
+	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_line;
+	struct line *s = &drawcalc.symbol0[i].symb.line;
+	s->p0 = xy(x0, y0);
+	s->p1 = xy(x1, y1);
+	s->blur = blur;
+	s->col = make_colour_frgb(r, g, b, 1.);
+
+	return 0.;
+}
+
+double drawcalc_add_circle(double x, double y, double radius, double r, double g, double b)
+{
+	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_circle;
+	struct circle *s = &drawcalc.symbol0[i].symb.circle;
+	s->pos = xy(x, y);
+	s->radius = radius;
+	s->col = make_colour_frgb(r, g, b, 1.);
 
 	return 0.;
 }
@@ -93,14 +137,16 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 {
 	buffer_t comp_log={0};
 	rlip_inputs_t inputs[] = {
-		RLIP_FUNC, {"symb", drawcalc_symbol_add, "fdddddddd"}, {"angle", &d->angle_v, "pd"},
-		{"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
+		RLIP_FUNC,
+		{"line", drawcalc_add_line, "fddddddddd"}, 
+		{"circle", drawcalc_add_circle, "fddddddd"}, 
+		{"angle", &d->angle_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
 	};
 
 	// Compilation
-	free_rlip(&drawcalc_prog);                                                        // ↓ TODO set to 0 so there's no return needed
-	drawcalc_prog = rlip_compile(d->expr_string, inputs, sizeof(inputs)/sizeof(*inputs), 1, make_log ? &comp_log : NULL);
+	free_rlip(&drawcalc_prog);
+	drawcalc_prog = rlip_compile(d->expr_string, inputs, sizeof(inputs)/sizeof(*inputs), 0, make_log ? &comp_log : NULL);
 	free_null(&d->expr_string);
 	drawcalc_prog.exec_on = &d->thread_on;
 
@@ -314,7 +360,22 @@ void drawing_calculator()
 	// Symbol drawing
 	rl_mutex_lock(&d->array_mutex);
 	for (int is=0; is < d->symbol1_count; is++)
-		draw_circle(FULLCIRCLE, sc_xy(d->symbol1[is].pos), d->symbol1[is].radius*zc.scrscale, drawing_thickness, frgb_to_col(d->symbol1[is].col), blend_add, 1.);
+		switch (d->symbol1[is].type)
+		{
+			case type_line:
+			{
+				struct line *s = &drawcalc.symbol1[is].symb.line;
+				draw_line_thin(sc_xy(s->p0), sc_xy(s->p1), sqrt(sq(s->blur*zc.scrscale) + sq(drawing_thickness)), frgb_to_col(s->col), blend_add, 1.);
+				break;
+			}
+
+			case type_circle:
+			{
+				struct circle *s = &drawcalc.symbol1[is].symb.circle;
+				draw_circle(FULLCIRCLE, sc_xy(s->pos), s->radius*zc.scrscale, drawing_thickness, frgb_to_col(s->col), blend_add, 1.);
+				break;
+			}
+		}
 	rl_mutex_unlock(&d->array_mutex);
 	draw_clamp();
 
