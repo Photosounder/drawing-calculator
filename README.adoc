@@ -40,7 +40,7 @@ v = line 0 -2 1 -4 0.02
 v = line 0 -2 -1 -4 0.02
 v = colour 0.6 0 0.4
 v = rect 0 0.5 4.25 1 .5 .5
-d v = colour -0.6 0 -0.4
+v = colour -0.6 0 -0.4
 v = number 0 0.5 7/12 2pi 7
 ```
 
