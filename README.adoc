@@ -5,7 +5,7 @@
 Here's what it does:
 
 - Enter an algorithm in https://github.com/Photosounder/rouziclib#rlip-rouziclib-interpreted-programming[RLIP].
-- Each time you call `symb` it adds a circle to a list of circles to draw. The first two arguments are the X-Y position, the next argument is the circle radius (same units as the position), and the next four arguments are red-green-blue-alpha in linear values in the 0 to 1 range.
+- Each time you call one of the symbol functions it adds the matching symbol to a list of symbols to draw.
 - The program just draws from that list of circles.
 
 As with all my projects it depends on https://github.com/Photosounder/rouziclib[rouziclib] for all the heavy lifting so it needs to be in your include path.
@@ -14,6 +14,35 @@ As with all my projects it depends on https://github.com/Photosounder/rouziclib[
 image::screenshot1.png[screenshot1.png,align="center"]
 
 == Usage
+
+=== Symbol functions
+
+The way you make the drawing calculator show anything on screen is by calling functions that match a symbol. But first the `colour` function should be called at least once to set a colour. Its 3 arguments are red-green-blue in linear values in the 0 to 1 range (numbers outside of that range do something too). For instance: `d v = colour red grn blu` or `d v = colour 0.6 0 0.4`. Due to RLIP not currently accepting functions that do not return a value all of these functions return a dummy value which must be assigned to a dummy variable, in the examples shown it's `v` (`d` in `d v` means `v` is declared as a `double`).
+
+Here are the currently available symbol functions:
+
+- `line <pos X of point A> <pos Y> <pos X of point B> <pos Y> <blur size>`
++ A line is simply define by the coordinates of a point A and point B, plus the size of a blur, which by default for a thin line should be 0.
+- `rect <pos X> <pos Y> <width> <height> <offset X> <offset Y>`
++
+The rectangle is defined by a position, the size of the rectangle independent of its position and an X-Y offset where X of 0 means the position sets the left edge, 1 sets the right edge, 0.5 centres the rectangle around the position, and same with the Y offset: 0 is the bottom edge, 1 is the top edge, 0.5 centres the rectangle. For instance `d v = rect x y 3 3 .5 .5` will make a square 3 units wide and tall centred on positions `x` and `y`.
+- `circle <pos X of centre> <pos Y> <radius of the circle>`
+- `number <pos X of centre> <pos Y> <scale of the glyphs> <value to show> <max number of digits to show>`
++
+For instance `d v = number 0 0 1 pi 7` will show `3.141593`.
+
+Example:
+
+```
+d v = colour 1 0.2 0
+v = circle 0 -1 1
+v = line 0 -2 1 -4 0.02
+v = line 0 -2 -1 -4 0.02
+v = colour 0.6 0 0.4
+v = rect 0 0.5 4.25 1 .5 .5
+d v = colour -0.6 0 -0.4
+v = number 0 0.5 7/12 2pi 7
+```
 
 === How to zoom
 
@@ -52,13 +81,13 @@ i_loop:
   expr d grn = (0.13 + spot_a)*m (1 - spot_b)^20 + spot_b*.04*m
   expr d blu = (0.5 + spot_b)*m (1 - spot_b)^20 + spot_b*.04*m
 
-  // Draw symbol
-  d v = symb p.x p.y rad red grn blu 1
+  // Draw circle
+  d v = colour red grn blu
+  v = circle p.x p.y rad
 
   i = add i .0008
 i i_cond = cmp i <= 1
 if i_cond goto i_loop
-return 0
 
 ```
 
@@ -72,7 +101,6 @@ image::screenshot3.png[screenshot3.png,align="center"]
 d num_curves = 512
 d iter = 400
 d t = k0
-d alpha = 1
 d radm = 0.004
 d r = 2pi/235
 d tr = 1/(2pi)
@@ -98,8 +126,9 @@ i_loop:
     expr d grn = sq(0.5+0.5*cos_tr_d2(j/200+0.25))
     expr d blu = sq(1-(i/num_curves+j/iter)/2)
 
-    // Draw symbol
-    d v = symb p.x p.y rad red grn blu alpha
+    // Draw circle
+    d v = colour red grn blu
+    v = circle p.x p.y rad
 
     j_end:
     inc1 j
@@ -109,7 +138,6 @@ i_loop:
   i = add i 3.86
 i i_cond = cmp i < num_curves
 if i_cond goto i_loop
-return 0
 ```
 
 === Graphing calculator
@@ -140,11 +168,11 @@ loop_x:
   y = mul y 0.5
 
   // Draw the circle
-  d v = symb x y .04 rb g rb 1
+  d v = colour rb g rb
+  v = circle x y .04
 x = add x 0.005
 i c_x = cmp x < 40
 if c_x goto loop_x
-return 0
 ```
 
 === Palette generation
@@ -167,15 +195,15 @@ i_loop:
   // Draw palette
   expr d p.x = i%16
   expr d p.y = floor(i/16)
-  d v = symb p.x p.y 0.46 red grn blu 1
+  d v = colour red grn blu
+  v = circle p.x p.y 0.46
 
   // Draw side graph
   p.x = mad red 8 16.5
   p.y = mad blu 8 3
-  v = symb p.x p.y 0.08 red grn blu 1
+  v = circle p.x p.y 0.08
 
   i = add i 1
 i i_cond = cmp i < 256
 if i_cond goto i_loop
-return 0
 ```

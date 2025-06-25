@@ -5,13 +5,21 @@
 typedef enum
 {
 	type_line,
-	type_circle
+	type_rect,
+	type_circle,
+	type_number
 } symb_type_t;
 
 struct line
 {
 	xy_t p0, p1;
 	double blur;
+	frgb_t col;
+};
+
+struct rect
+{
+	rect_t rect;
 	frgb_t col;
 };
 
@@ -22,13 +30,23 @@ struct circle
 	frgb_t col;
 };
 
+struct number
+{
+	xy_t pos;
+	double scale, value;
+	frgb_t col;
+	int8_t prec;
+};
+
 typedef struct
 {
 	symb_type_t type;
 	union
 	{
 		struct line line;
+		struct rect rect;
 		struct circle circle;
+		struct number number;
 	} symb;
 } drawcalc_symbol_t;
 
@@ -44,6 +62,8 @@ typedef struct
 	drawcalc_symbol_t *symbol0, *symbol1;
 	size_t symbol0_count, symbol0_as, symbol1_count, symbol1_as;
 	rl_mutex_t array_mutex;
+
+	frgb_t colour_cur;
 
 	// Used only by main thread:
 	int recalc;
@@ -108,7 +128,12 @@ size_t drawcalc_alloc_elem()
 	return i;
 }
 
-double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur, double r, double g, double b)
+double drawcalc_set_colour(double r, double g, double b)
+{
+	drawcalc.colour_cur = make_colour_frgb(r, g, b, 1.);
+}
+
+double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur)
 {
 	size_t i = drawcalc_alloc_elem();
 	drawcalc.symbol0[i].type = type_line;
@@ -116,19 +141,44 @@ double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur
 	s->p0 = xy(x0, y0);
 	s->p1 = xy(x1, y1);
 	s->blur = blur;
-	s->col = make_colour_frgb(r, g, b, 1.);
+	s->col = drawcalc.colour_cur;
 
 	return 0.;
 }
 
-double drawcalc_add_circle(double x, double y, double radius, double r, double g, double b)
+double drawcalc_add_rect(double pos_x, double pos_y, double size_x, double size_y, double off_x, double off_y)
+{
+	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_rect;
+	struct rect *s = &drawcalc.symbol0[i].symb.rect;
+	s->rect = make_rect_off( xy(pos_x, pos_y), xy(size_x, size_y), xy(off_x, off_y) );
+	s->col = drawcalc.colour_cur;
+
+	return 0.;
+}
+
+double drawcalc_add_circle(double x, double y, double radius)
 {
 	size_t i = drawcalc_alloc_elem();
 	drawcalc.symbol0[i].type = type_circle;
 	struct circle *s = &drawcalc.symbol0[i].symb.circle;
 	s->pos = xy(x, y);
 	s->radius = radius;
-	s->col = make_colour_frgb(r, g, b, 1.);
+	s->col = drawcalc.colour_cur;
+
+	return 0.;
+}
+
+double drawcalc_add_number(double x, double y, double scale, double value, double prec)
+{
+ 	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_number;
+	struct number *s = &drawcalc.symbol0[i].symb.number;
+	s->pos = xy(x, y - 0.5*scale);
+	s->scale = scale * (1./6.);
+	s->value = value;
+	s->prec = prec;
+	s->col = drawcalc.colour_cur;
 
 	return 0.;
 }
@@ -138,8 +188,11 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 	buffer_t comp_log={0};
 	rlip_inputs_t inputs[] = {
 		RLIP_FUNC,
-		{"line", drawcalc_add_line, "fddddddddd"}, 
-		{"circle", drawcalc_add_circle, "fddddddd"}, 
+		{"colour", drawcalc_set_colour, "fdddd"}, 
+		{"line", drawcalc_add_line, "fdddddd"}, 
+		{"rect", drawcalc_add_rect, "fddddddd"}, 
+		{"circle", drawcalc_add_circle, "fdddd"}, 
+		{"number", drawcalc_add_number, "fdddddd"}, 
 		{"angle", &d->angle_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
 	};
@@ -166,7 +219,7 @@ int drawcalc_thread(drawcalc_t *d)
 	int inputs_changed;
 	double rad, th;
 
-	drawcalc_prog_init(d, 1);
+ 	drawcalc_prog_init(d, 1);
 
 	do
 	{
@@ -174,6 +227,8 @@ int drawcalc_thread(drawcalc_t *d)
 		d->symbol0_count = 0;
 
 		d->angle_v = d->angle_next;
+
+		d->colour_cur = make_colour_frgb(3., -1., 2., 1.);
 
 		// Compute all symbols once
 		rlip_execute_opcode(&drawcalc_prog);
@@ -369,10 +424,24 @@ void drawing_calculator()
 				break;
 			}
 
+			case type_rect:
+			{
+				struct rect *s = &drawcalc.symbol1[is].symb.rect;
+				draw_rect_full(sc_rect(s->rect), drawing_thickness, frgb_to_col(s->col), blend_add, 1.);
+				break;
+			}
+
 			case type_circle:
 			{
 				struct circle *s = &drawcalc.symbol1[is].symb.circle;
 				draw_circle(FULLCIRCLE, sc_xy(s->pos), s->radius*zc.scrscale, drawing_thickness, frgb_to_col(s->col), blend_add, 1.);
+				break;
+			}
+
+			case type_number:
+			{
+				struct number *s = &drawcalc.symbol1[is].symb.number;
+				print_to_screen(s->pos, s->scale, frgb_to_col(s->col), 1., ALIG_CENTRE | MONODIGITS, "%.*g", (int) s->prec, s->value);
 				break;
 			}
 		}
