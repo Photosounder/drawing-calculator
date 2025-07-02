@@ -7,35 +7,46 @@ typedef enum
 	type_line,
 	type_rect,
 	type_circle,
-	type_number
+	type_number,
+	type_text,
 } symb_type_t;
 
 struct line
 {
+	frgb_t col;
 	xy_t p0, p1;
 	double blur;
-	frgb_t col;
 };
 
 struct rect
 {
-	rect_t rect;
 	frgb_t col;
+	rect_t rect;
 };
 
 struct circle
 {
+	frgb_t col;
 	xy_t pos;
 	double radius;
-	frgb_t col;
 };
 
 struct number
 {
+	frgb_t col;
 	xy_t pos;
 	double scale, value;
+	int8_t prec, alig;
+};
+
+#define TEXT_VAL_COUNT 2
+struct text
+{
 	frgb_t col;
-	int8_t prec;
+	xy_t pos;
+	double scale;
+	uint64_t v[TEXT_VAL_COUNT];
+	int8_t alig;
 };
 
 typedef struct
@@ -47,6 +58,7 @@ typedef struct
 		struct rect rect;
 		struct circle circle;
 		struct number number;
+		struct text text;
 	} symb;
 } drawcalc_symbol_t;
 
@@ -84,7 +96,7 @@ void drawcalc_compilation_log(char *comp_log)
 		"elem 10", "type textedit", "pos	0;3	-0;9", "dim	8;10	1", "off	0	1", "",
 	};
 
-	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Position calc compilation log");
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Drawing calc compilation log");
 
 	if (mouse.window_minimised_flag > 0)
 		return;
@@ -131,6 +143,7 @@ size_t drawcalc_alloc_elem()
 double drawcalc_set_colour(double r, double g, double b)
 {
 	drawcalc.colour_cur = make_colour_frgb(r, g, b, 1.);
+	return 0.;
 }
 
 double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur)
@@ -142,7 +155,6 @@ double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur
 	s->p1 = xy(x1, y1);
 	s->blur = blur;
 	s->col = drawcalc.colour_cur;
-
 	return 0.;
 }
 
@@ -153,7 +165,6 @@ double drawcalc_add_rect(double pos_x, double pos_y, double size_x, double size_
 	struct rect *s = &drawcalc.symbol0[i].symb.rect;
 	s->rect = make_rect_off( xy(pos_x, pos_y), xy(size_x, size_y), xy(off_x, off_y) );
 	s->col = drawcalc.colour_cur;
-
 	return 0.;
 }
 
@@ -165,11 +176,10 @@ double drawcalc_add_circle(double x, double y, double radius)
 	s->pos = xy(x, y);
 	s->radius = radius;
 	s->col = drawcalc.colour_cur;
-
 	return 0.;
 }
 
-double drawcalc_add_number(double x, double y, double scale, double value, double prec)
+double drawcalc_add_number(double x, double y, double scale, double value, double prec, double alig)
 {
  	size_t i = drawcalc_alloc_elem();
 	drawcalc.symbol0[i].type = type_number;
@@ -178,8 +188,22 @@ double drawcalc_add_number(double x, double y, double scale, double value, doubl
 	s->scale = scale * (1./6.);
 	s->value = value;
 	s->prec = prec;
+	s->alig = alig;
 	s->col = drawcalc.colour_cur;
+	return 0.;
+}
 
+double drawcalc_add_text(double x, double y, double scale, double alig, double v0, double v1)
+{
+ 	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_text;
+	struct text *s = &drawcalc.symbol0[i].symb.text;
+	s->pos = xy(x, y - 0.5*scale);
+	s->scale = scale * (1./6.);
+	s->alig = alig;
+	s->v[0] = v0;
+	s->v[1] = v1;
+	s->col = drawcalc.colour_cur;
 	return 0.;
 }
 
@@ -192,9 +216,11 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 		{"line", drawcalc_add_line, "fdddddd"}, 
 		{"rect", drawcalc_add_rect, "fddddddd"}, 
 		{"circle", drawcalc_add_circle, "fdddd"}, 
-		{"number", drawcalc_add_number, "fdddddd"}, 
+		{"number", drawcalc_add_number, "fddddddd"}, 
+		{"text", drawcalc_add_text, "fddddddd"}, 
 		{"angle", &d->angle_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
+		{"cost_of_factor", estimate_cost_of_mul_factor, "fdd"},
 	};
 
 	// Compilation
@@ -271,6 +297,7 @@ void drawcalc_form(char **form_string, int *form_ret, int *comp_log_detached)
 
 	// Window
 	flwindow_init_defaults(&window);
+	window.pinned_sm_preset = 1.8;
 	window.bg_opacity = OPACITY;
 	window.shadow_strength = 0.5*window.bg_opacity;
 	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, *comp_log_detached);
@@ -282,7 +309,7 @@ void drawcalc_form(char **form_string, int *form_ret, int *comp_log_detached)
 		get_textedit_fromlayout(&layout, 10)->first_click_no_sel = 1;
 		get_textedit_fromlayout(&layout, 10)->edit_mode = te_mode_full;
 		get_textedit_fromlayout(&layout, 10)->scroll_mode = 1;
-		get_textedit_fromlayout(&layout, 10)->scroll_mode_scale_def = 32. * 4.5;
+		get_textedit_fromlayout(&layout, 10)->scroll_mode_scale_def = 200.;
 		print_to_layout_textedit(&layout, 10, 1, "");	// default formula
 	}
 
@@ -318,6 +345,8 @@ void drawcalc_var_window(drawcalc_t *d)
 	// Window
 	static flwindow_t window={0};
 	flwindow_init_defaults(&window);
+	window.pinned_offset_preset = xy(1e9, 4.);
+	window.pinned_sm_preset = 1.1;
 	window.bg_opacity = OPACITY;
 	window.shadow_strength = 0.5*window.bg_opacity;
 	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
@@ -332,9 +361,9 @@ void drawcalc_var_window(drawcalc_t *d)
 			rl_atomic_store_i32(&d->inputs_changed, 1);
 }
 
-void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc_form_detached)
+void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc_form_detached, int *calc_var_detached)
 {
-	static int init=1, fit_diag_on=0;
+	static int init=1;
 	int i;
 	static xyi_t dim;
 	char *path;
@@ -343,15 +372,15 @@ void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc
 	static gui_layout_t layout={0};
 	const char *layout_src[] = {
 		"v 1	0;3	0", "v 2	0	-0;2", "",
-		"elem 0", "type none", "label Position calculator parameters", "pos	-3;1	-1", "dim	5;9	6;5", "off	0	1", "",
-		"elem 1", "type none", "label Position calculator parameters", "pos	0;1	-1", "dim	4;9	6;5", "off	0	1", "",
+		"elem 0", "type none", "label Drawing calculator parameters", "pos	-3;1	-1", "dim	5;9	6;5", "off	0	1", "",
+		"elem 1", "type rect", "label Drawing calculator parameters", "pos	0;1	-1", "dim	2;7	6;5", "off	0	1", "",
 		"elem 10", "type rect", "pos	0;1	-1;9", "dim	2;11	5;5", "off	1", "",
-		"elem 20", "type rect", "link_pos_id 80._b", "pos	v2", "dim	2;1	3;3", "off	0	1", "",
-		"elem 80", "type rect", "link_pos_id 10.rt", "pos	v1", "dim	2;1	2", "off	0	1", "",
+		"elem 20", "type rect", "link_pos_id 10.rt", "pos	v1", "dim	2;1	3;3", "off	0	1", "",
+		"elem 30", "type rect", "link_pos_id 20._b", "pos	v2", "dim	2;1	2", "off	0	1", "",
 	};
 
 	gui_layout_init_pos_scale(&layout, add_xy(zc.limit_u, neg_y(set_xy(0.125))), 1.5, XY0, 0);
-	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Position calc");
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Drawing calc");
 
 	if (mouse.window_minimised_flag > 0)
 		return;
@@ -362,7 +391,8 @@ void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc
 	window.bg_opacity = OPACITY;
 	window.shadow_strength = 0.5*window.bg_opacity;
 	flwindow_init_pinned(&window);
-	draw_dialog_window_fromlayout(&window, NULL, NULL, &layout, *calc_form_detached);
+	if (*calc_form_detached==0 | *calc_var_detached==0)
+		draw_dialog_window_fromlayout(&window, NULL, NULL, &layout, *calc_form_detached);
 
 	// Formula processing
 	d->recalc |= *form_ret==1 || *form_ret==4 || (d->inputs_changed && d->thread_on != 1);
@@ -441,7 +471,45 @@ void drawing_calculator()
 			case type_number:
 			{
 				struct number *s = &drawcalc.symbol1[is].symb.number;
-				print_to_screen(s->pos, s->scale, frgb_to_col(s->col), 1., ALIG_CENTRE | MONODIGITS, "%.*g", (int) s->prec, s->value);
+				rect_t bounding_rect = make_rect_off(s->pos, mul_xy(xy(20., 1.), set_xy(s->scale * 6.)), xy(0.5, 0.));
+				//draw_rect_full(sc_rect(bounding_rect), drawing_thickness, frgb_to_col(s->col), blend_add, 1.);
+				if (check_box_on_screen(bounding_rect))
+					print_to_screen(s->pos, s->scale, frgb_to_col(s->col), 1., s->alig, "%.*g", (int) s->prec, s->value);
+				break;
+			}
+
+			case type_text:
+			{
+				struct text *s = &drawcalc.symbol1[is].symb.text;
+				rect_t bounding_rect = make_rect_off(s->pos, mul_xy(xy(20., 1.), set_xy(s->scale * 6.)), xy(0.5, 0.));
+				if (check_box_on_screen(bounding_rect))
+				{
+					// Convert base54 values to string (base54 gives 9 chars in 52 bits, alternatives are bases 36 and 90)
+					const int base = 54, char_count = 9;
+					const char base54[54] =
+						"\nabcdefghijklmnopqrstuvwxyz" " _\t"	// 1 = a, 26 = z
+						"0123456789"				// 30 = '0'
+						".:=<>+-*/|"				// 40 - 49
+						"\302\260\"'";				// 50-51 = °, 52 = ", 53 = '
+
+					char string[9*2 + 1];
+					int iv, ic = 0;
+
+					for (iv=0; iv < TEXT_VAL_COUNT; iv++)
+					{
+						uint64_t v = s->v[iv];
+
+						while (v)
+						{
+							string[ic] = base54[v % base];
+							ic++;
+							v /= base;
+						}
+					}
+					string[ic] = '\0';
+
+					print_to_screen(s->pos, s->scale, frgb_to_col(s->col), 1., s->alig, "%s", string);
+				}
 				break;
 			}
 		}
@@ -456,7 +524,7 @@ void drawing_calculator()
 	window_register(1, drawcalc_var_window, NULL, RECTNAN, &calc_var_detached, 1, d);
 	window_set_parent(drawcalc_var_window, NULL, drawcalc_window, NULL);
 
-	window_register(1, drawcalc_window, NULL, RECTNAN, NULL, 4, d, &form_string, &form_ret, &calc_form_detached);
+	window_register(1, drawcalc_window, NULL, RECTNAN, NULL, 5, d, &form_string, &form_ret, &calc_form_detached, &calc_var_detached);
 }
 
 #ifndef DRAWCALC_AS_A_LIBRARY
