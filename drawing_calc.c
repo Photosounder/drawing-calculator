@@ -2,10 +2,13 @@
 #include "rl.h"
 #endif
 
+#define DRAWCALC_ELEM_LIMIT (16<<20)
+
 typedef enum
 {
 	type_line,
 	type_rect,
+	type_quad,
 	type_circle,
 	type_number,
 	type_text,
@@ -22,6 +25,13 @@ struct rect
 {
 	frgb_t col;
 	rect_t rect;
+};
+
+struct quad
+{
+	frgb_t col;
+	xy_t p[4];
+	double blur;
 };
 
 struct circle
@@ -56,6 +66,7 @@ typedef struct
 	{
 		struct line line;
 		struct rect rect;
+		struct quad quad;
 		struct circle circle;
 		struct number number;
 		struct text text;
@@ -136,6 +147,11 @@ _Thread_local rlip_t drawcalc_prog={0};
 size_t drawcalc_alloc_elem()
 {
 	size_t i = drawcalc.symbol0_count;
+	if (drawcalc.symbol0_count >= DRAWCALC_ELEM_LIMIT)
+	{
+		drawcalc.symbol0_count--;
+		i = drawcalc.symbol0_count;
+	}
 	alloc_enough_mutex(&drawcalc.symbol0, drawcalc.symbol0_count+=1, &drawcalc.symbol0_as, sizeof(drawcalc_symbol_t), 1.4, &drawcalc.array_mutex);
 	return i;
 }
@@ -164,6 +180,20 @@ double drawcalc_add_rect(double pos_x, double pos_y, double size_x, double size_
 	drawcalc.symbol0[i].type = type_rect;
 	struct rect *s = &drawcalc.symbol0[i].symb.rect;
 	s->rect = make_rect_off( xy(pos_x, pos_y), xy(size_x, size_y), xy(off_x, off_y) );
+	s->col = drawcalc.colour_cur;
+	return 0.;
+}
+
+double drawcalc_add_quad(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double blur)
+{
+	size_t i = drawcalc_alloc_elem();
+	drawcalc.symbol0[i].type = type_quad;
+	struct quad *s = &drawcalc.symbol0[i].symb.quad;
+	s->p[0] = xy(x0, y0);
+	s->p[1] = xy(x1, y1);
+	s->p[2] = xy(x2, y2);
+	s->p[3] = xy(x3, y3);
+	s->blur = blur;
 	s->col = drawcalc.colour_cur;
 	return 0.;
 }
@@ -207,6 +237,56 @@ double drawcalc_add_text(double x, double y, double scale, double alig, double v
 	return 0.;
 }
 
+typedef struct
+{
+	double *array;
+	size_t count, as;
+} rlip_store_array_t;
+
+rlip_store_array_t *rlip_store = NULL;
+size_t rlip_store_count=0, rlip_store_as=0;
+#define RLIP_STORE_MAX_ARRAY_COUNT 100
+#define RLIP_STORE_MAX_ARRAY_LEN (4<<20)
+
+double rlip_store_free()
+{
+	for (int i=0; i < rlip_store_count; i++)
+		free(rlip_store[i].array);
+	free_null(&rlip_store);
+	rlip_store_count = rlip_store_as = 0;
+	return 0.;
+}
+
+double rlip_store_val(int64_t store_id, int64_t store_index, double v)
+{
+	if (store_id >= RLIP_STORE_MAX_ARRAY_COUNT || store_id < 0)
+		return -1.;
+
+	if (store_index >= RLIP_STORE_MAX_ARRAY_LEN || store_index < 0)
+		return -2.;
+
+	// Enlarge as needed
+	rlip_store_count = MAXN(rlip_store_count, store_id+1);
+	alloc_enough(&rlip_store, rlip_store_count, &rlip_store_as, sizeof(rlip_store_array_t), 1.4);
+	rlip_store[store_id].count = MAXN(rlip_store[store_id].count, store_index+1);
+	alloc_enough(&rlip_store[store_id].array, rlip_store[store_id].count, &rlip_store[store_id].as, sizeof(double), 1.1);
+
+	// Store value
+	rlip_store[store_id].array[store_index] = v;
+	return 0.;
+}
+
+double rlip_retrieve_val(int64_t store_id, int64_t store_index)
+{
+	if (store_id >= rlip_store_count || store_id < 0)
+		return NAN;
+
+	if (store_index >= rlip_store[store_id].count || store_index < 0)
+		return NAN;
+
+	return rlip_store[store_id].array[store_index];
+}
+
 void drawcalc_prog_init(drawcalc_t *d, int make_log)
 {
 	buffer_t comp_log={0};
@@ -215,9 +295,13 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 		{"colour", drawcalc_set_colour, "fdddd"}, 
 		{"line", drawcalc_add_line, "fdddddd"}, 
 		{"rect", drawcalc_add_rect, "fddddddd"}, 
+		{"quad", drawcalc_add_quad, "fdddddddddd"}, 
 		{"circle", drawcalc_add_circle, "fdddd"}, 
 		{"number", drawcalc_add_number, "fddddddd"}, 
 		{"text", drawcalc_add_text, "fddddddd"}, 
+		{"store_clear", rlip_store_free, "fd"}, 
+		{"store", rlip_store_val, "fdiid"}, 
+		{"load", rlip_retrieve_val, "fdii"}, 
 		{"angle", &d->angle_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
 		{"cost_of_factor", estimate_cost_of_mul_factor, "fdd"},
@@ -458,6 +542,13 @@ void drawing_calculator()
 			{
 				struct rect *s = &drawcalc.symbol1[is].symb.rect;
 				draw_rect_full(sc_rect(s->rect), drawing_thickness, frgb_to_col(s->col), blend_add, 1.);
+				break;
+			}
+
+			case type_quad:
+			{
+				struct quad *s = &drawcalc.symbol1[is].symb.quad;
+				draw_polygon_wc(s->p, 4, sqrt(sq(s->blur*zc.scrscale) + sq(drawing_thickness)), frgb_to_col(s->col), blend_add, 1.);
 				break;
 			}
 

@@ -26,6 +26,7 @@ Here are the currently available symbol functions:
 - `rect <pos X> <pos Y> <width> <height> <offset X> <offset Y>`
 +
 The rectangle is defined by a position, the size of the rectangle independent of its position and an X-Y offset where X of 0 means the position sets the left edge, 1 sets the right edge, 0.5 centres the rectangle around the position, and same with the Y offset: 0 is the bottom edge, 1 is the top edge, 0.5 centres the rectangle. For instance `d v = rect x y 3 3 .5 .5` will make a square 3 units wide and tall centred on positions `x` and `y`.
+- `quad <pos X of point A> <pos Y> <pos X of point B> <pos Y> <pos X of point C> <pos Y> <pos X of point D> <pos Y> <blur size>`
 - `circle <pos X of centre> <pos Y> <radius of the circle>`
 - `number <pos X of centre> <pos Y> <scale of the glyphs> <value to show> <max number of digits to show> <alignment>`
 +
@@ -75,8 +76,9 @@ Example:
 ```
 d v = colour 1 0.2 0
 v = circle 0 -1 1
-v = line 0 -2 1 -4 0.02
-v = line 0 -2 -1 -4 0.02
+v = line 0 -2 1 -4 0.01
+v = line 0 -2 -1 -4 0.01
+v = quad -1 -4  0 -4.25  1 -4  0 -4.5 0
 v = colour 0.6 0 0.4
 v = rect 0 0.5 4.25 1 .5 .5
 v = colour -0.6 0 -0.4
