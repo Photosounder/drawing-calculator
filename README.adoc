@@ -74,16 +74,18 @@ _two bytes of_ °, ' , &#34;
 Example:
 
 ```
-d v = colour 1 0.2 0
+d v = colour 1 0.8 0.6
 v = circle 0 -1 1
-v = line 0 -2 1 -4 0.01
-v = line 0 -2 -1 -4 0.01
-v = quad -1 -4  0 -4.25  1 -4  0 -4.5 0
+v = quad -.8 -1  0 -.2  .8 -1  0 -1.8 .75
+v = colour 1 0.2 0
+v = line 0 -28/12 8/12 -4 0.01
+v = line 0 -28/12 -8/12 -4 0.01
+v = quad -1 -20/12  0 -25/12  1 -20/12  0 -28/12 0
 v = colour 0.6 0 0.4
-v = rect 0 0.5 4.25 1 .5 .5
+v = rect 0 1.5 4.25 1 .5 .5
 v = colour -0.6 0 -0.4
-v = number 0 0.5 7/12 2pi 7 9
-v = colour -1 -0.2 0
+v = number 0 1.5 7/12 2pi 7 9
+v = colour -1 -0.8 -0.6
 v = text 0 -1 7/12 9 32+54*(16+54*(9)) 0
 ```
 
