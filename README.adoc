@@ -33,7 +33,7 @@ The rectangle is defined by a position, the size of the rectangle independent of
 For instance `d v = number 0 0 1 pi 7 9` will show `3.141593`. The alignment argument decides of the printing layout: 1 is centred around the position, 0 makes the position define the left edge of the text, 2 defines the right edge, adding 8 makes digits be monospaced, adding 4 makes all glyphs monospaced. Therefore 9 means centred with monospaced digits and is a good default.
 - `text <pos X> <pos Y> <scale of the glyphs> <alignment> <first text value> <second text value>`
 +
-Much like the `number` function, `text` displays text. The weird part is how the text data is stored: as two numbers between 0 and almost 2^52^-1, or 54^9^, using base54 encoding (the alternatives were base36 and base90). For instance "c0 = " is written `3+54*(30+54*(27+54*(42+54*(27))))`. `3` is the 3rd letter alphabet 'c', `30` is '0', `27` is a space, `42` is '='. The simplest way to encode text is to write the first character's value, then paste `+54*()` and press the left arrow key once, then enter the second character's value, paste `+54*()` again, press the left arrow key and so forth. One value reliably holds 9 characters, if more are needed a second value can be entered for another 9 characters. The values for each character of this base54 encoding are detailed below:
+Much like the `number` function, `text` displays text. The weird part is how the text data is stored: as two numbers between 0 and almost 2^52^-1, or 54^9^, using base54 encoding (the alternatives were base36 and base90). For instance "c0 = " is written `3+54(30+54(27+54(42+54(27))))`. `3` is the 3rd letter alphabet 'c', `30` is '0', `27` is a space, `42` is '='. The simplest way to encode text is to write the first character's value, then paste `+54()` and press the left arrow key once, then enter the second character's value, paste `+54()` again, press the left arrow key and so forth. One value reliably holds 9 characters, if more are needed a second value can be entered for another 9 characters. The values for each character of this base54 encoding are detailed below:
 +
 [%header,format=csv]
 |===
@@ -86,7 +86,7 @@ v = rect 0 1.5 4.25 1 .5 .5
 v = colour -0.6 0 -0.4
 v = number 0 1.5 7/12 2pi 7 9
 v = colour -1 -0.8 -0.6
-v = text 0 -1 7/12 9 32+54*(16+54*(9)) 0
+v = text 0 -1 7/12 9 32+54(16+54(9)) 0
 ```
 
 === How to zoom

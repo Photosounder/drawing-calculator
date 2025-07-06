@@ -2,7 +2,7 @@
 #include "rl.h"
 #endif
 
-#define DRAWCALC_ELEM_LIMIT (16<<20)
+#define DRAWCALC_ELEM_LIMIT (256<<10)
 
 typedef enum
 {
@@ -147,11 +147,26 @@ _Thread_local rlip_t drawcalc_prog={0};
 size_t drawcalc_alloc_elem()
 {
 	size_t i = drawcalc.symbol0_count;
+
+	// Stop and erase everything if hitting the limit
 	if (drawcalc.symbol0_count >= DRAWCALC_ELEM_LIMIT)
 	{
-		drawcalc.symbol0_count--;
-		i = drawcalc.symbol0_count;
+		drawcalc.thread_on = 0;		// end the execution
+		free_null(&drawcalc.symbol0);
+		drawcalc.symbol0_as = 0;
+		drawcalc.symbol0_count = 1;
+
+		// Draw warning
+		extern double drawcalc_set_colour(double r, double g, double b);
+		extern double drawcalc_add_line(double x0, double y0, double x1, double y1, double blur);
+		extern double drawcalc_add_text(double x, double y, double scale, double alig, double v0, double v1);
+		drawcalc_set_colour(1., 0.05, 0.);
+		drawcalc_add_line(-7., 0., 7., 0., 1.5);
+		drawcalc_set_colour(1., 0.7, 0.);
+		drawcalc_add_text(0., 0., 1.5, 9., 12568972350., 101543970348.);
+		return 0;
 	}
+
 	alloc_enough_mutex(&drawcalc.symbol0, drawcalc.symbol0_count+=1, &drawcalc.symbol0_as, sizeof(drawcalc_symbol_t), 1.4, &drawcalc.array_mutex);
 	return i;
 }
