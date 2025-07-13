@@ -81,6 +81,8 @@ typedef struct
 	char *expr_string;
 	double angle_v, k[5];
 	double angle_next;
+	double time_v, time_next, time_rate_v;
+	int animation;
 
 	drawcalc_symbol_t *symbol0, *symbol1;
 	size_t symbol0_count, symbol0_as, symbol1_count, symbol1_as;
@@ -317,7 +319,7 @@ void drawcalc_prog_init(drawcalc_t *d, int make_log)
 		{"store_clear", rlip_store_free, "fd"}, 
 		{"store", rlip_store_val, "fdiid"}, 
 		{"load", rlip_retrieve_val, "fdii"}, 
-		{"angle", &d->angle_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
+		{"angle", &d->angle_v, "pd"}, {"time", &d->time_v, "pd"}, {"k0", &d->k[0], "pd"}, {"k1", &d->k[1], "pd"}, {"k2", &d->k[2], "pd"}, {"k3", &d->k[3], "pd"}, {"k4", &d->k[4], "pd"}, 
 		{"xor", xor_double, "fddd"}, {"cos_tr_d2", fastcos_tr_d2, "fdd"},
 		{"cost_of_factor", estimate_cost_of_mul_factor, "fdd"},
 	};
@@ -343,6 +345,7 @@ int drawcalc_thread(drawcalc_t *d)
 {
 	int inputs_changed;
 	double rad, th;
+	static double time0=NAN, time1;
 
  	drawcalc_prog_init(d, 1);
 
@@ -352,6 +355,21 @@ int drawcalc_thread(drawcalc_t *d)
 		d->symbol0_count = 0;
 
 		d->angle_v = d->angle_next;
+		d->time_v = d->time_next;
+
+		time1 = get_time_hr();
+
+		// Increment time
+		if (d->animation)
+		{
+			if (isnan(time0) || time1 - time0 > 1.)
+				time0 = time1;
+
+			d->time_next += (time1 - time0) * d->time_rate_v;
+			d->time_v = d->time_next;
+		}
+
+		time0 = time1;
 
 		d->colour_cur = make_colour_frgb(3., -1., 2., 1.);
 
@@ -367,6 +385,8 @@ int drawcalc_thread(drawcalc_t *d)
 
 		// Check loop flag and reset it atomically
 		inputs_changed = rl_atomic_get_and_set(&d->inputs_changed, 0);
+		if (d->animation)
+			inputs_changed = 1;
 	} while (inputs_changed && d->thread_on);
 
 	// End thread
@@ -423,7 +443,6 @@ void drawcalc_form(char **form_string, int *form_ret, int *comp_log_detached)
 void drawcalc_var_window(drawcalc_t *d)
 {
 	int i, ret;
-	static double stride_power_v=NAN;
 
 	static gui_layout_t layout={0};
 	const char *layout_src[] = {
@@ -436,7 +455,7 @@ void drawcalc_var_window(drawcalc_t *d)
 		"elem 140", "type knob", "label k4", "knob -1e4 0 1e4 tan", "knob_arg 4", "link_pos_id 130", "pos	1;3	0", "dim	1", "off	0	1", "",
 	};
 
-	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Pos calc variables");
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Drawing calc variables");
 
 	if (mouse.window_minimised_flag > 0)
 		return;
@@ -460,7 +479,43 @@ void drawcalc_var_window(drawcalc_t *d)
 			rl_atomic_store_i32(&d->inputs_changed, 1);
 }
 
-void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc_form_detached, int *calc_var_detached)
+void drawcalc_time_window(drawcalc_t *d)
+{
+	int i, ret;
+
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Time", "pos	0	0", "dim	2;11	2;10", "off	0	1", "",
+		"elem 10", "type knob", "label Time", "knob -1e+300 0 1e+300 tan %.3g", "knob_arg 10", "pos	0;4	-0;10", "dim	1", "off	0	1", "",
+		"elem 20", "type knob", "label Time rate", "knob -10000 1 10000 tan %.3g", "knob_arg 0.5", "link_pos_id 10.rt", "pos	0;3	0", "dim	1", "off	0	1", "",
+		"elem 30", "type checkbox", "label Animate", "link_pos_id 10.lb", "pos	0;3	-0;3", "dim	1;9	0;5", "off	0	1", "",
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Drawing calc time");
+
+	if (mouse.window_minimised_flag > 0)
+		return;
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	window.pinned_offset_preset = xy(1e9, 4.);
+	window.pinned_sm_preset = 1.1;
+	window.bg_opacity = OPACITY;
+	window.shadow_strength = 0.5*window.bg_opacity;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Controls
+	if (ctrl_knob_fromlayout(&d->time_next, &layout, 10))
+		rl_atomic_store_i32(&d->inputs_changed, 1);
+
+	ctrl_knob_fromlayout(&d->time_rate_v, &layout, 20);
+	ctrl_checkbox_fromlayout(&d->animation, &layout, 30);	
+	if (d->animation)
+		rl_atomic_store_i32(&d->inputs_changed, 1);
+}
+
+void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc_form_detached, int *calc_var_detached, int *calc_time_detached)
 {
 	static int init=1;
 	int i;
@@ -490,7 +545,7 @@ void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc
 	window.bg_opacity = OPACITY;
 	window.shadow_strength = 0.5*window.bg_opacity;
 	flwindow_init_pinned(&window);
-	if (*calc_form_detached==0 | *calc_var_detached==0)
+	if (*calc_form_detached==0 | *calc_var_detached==0 | *calc_time_detached==0)
 		draw_dialog_window_fromlayout(&window, NULL, NULL, &layout, *calc_form_detached);
 
 	// Formula processing
@@ -518,6 +573,7 @@ void drawcalc_window(drawcalc_t *d, char **form_string, int *form_ret, int *calc
 	// Sub-windows
 	window_set_parent_area(drawcalc_form, NULL, gui_layout_elem_comp_area_os(&layout, 10, XY0));
 	window_set_parent_area(drawcalc_var_window, NULL, gui_layout_elem_comp_area_os(&layout, 20, XY0));
+	window_set_parent_area(drawcalc_time_window, NULL, gui_layout_elem_comp_area_os(&layout, 30, XY0));
 }
 
 void drawing_calculator()
@@ -525,7 +581,7 @@ void drawing_calculator()
 	static int init = 1;
 	static rect_t im_display_rect={0};
 	drawcalc_t *d = &drawcalc;
-	static int calc_form_detached=0, comp_log_detached=0, calc_var_detached=0;
+	static int calc_form_detached=0, comp_log_detached=0, calc_var_detached=0, calc_time_detached=0;
 	static char *form_string=NULL;
 	static int form_ret=0;
 	static ctrl_resize_rect_t range_resize_state={0};
@@ -539,6 +595,8 @@ void drawing_calculator()
 		rl_mutex_init(&drawcalc.array_mutex);
 
 		d->angle_next = NAN;
+		d->time_next = NAN;
+		d->time_rate_v = NAN;
 	}
 
 	// Symbol drawing
@@ -591,12 +649,14 @@ void drawing_calculator()
 				if (check_box_on_screen(bounding_rect))
 				{
 					// Convert base54 values to string (base54 gives 9 chars in 52 bits, alternatives are bases 36 and 90)
-					const int base = 54, char_count = 9;
-					const char base54[54] =
+					const int base = 98, char_count = 9;
+					const char base98[98] =
 						"\nabcdefghijklmnopqrstuvwxyz" " _\t"	// 1 = a, 26 = z
 						"0123456789"				// 30 = '0'
 						".:=<>+-*/|"				// 40 - 49
-						"\302\260\"'";				// 50-51 = °, 52 = ", 53 = '
+						",ABCDEFGHIJKLMNOPQRSTUVWXYZ" ";!?"	// 50-79, 51 = A, 76 = Z
+						"\302\260'\"()[]{}"			// 80-81 = °, 82 = ", 83 = '
+						"#$&@\\^`~";				// 90-97
 
 					char string[9*2 + 1];
 					int iv, ic = 0;
@@ -607,7 +667,7 @@ void drawing_calculator()
 
 						while (v)
 						{
-							string[ic] = base54[v % base];
+							string[ic] = base98[v % base];
 							ic++;
 							v /= base;
 						}
@@ -629,8 +689,10 @@ void drawing_calculator()
 	window_set_parent(drawcalc_form, NULL, drawcalc_window, NULL);
 	window_register(1, drawcalc_var_window, NULL, RECTNAN, &calc_var_detached, 1, d);
 	window_set_parent(drawcalc_var_window, NULL, drawcalc_window, NULL);
+	window_register(1, drawcalc_time_window, NULL, RECTNAN, &calc_time_detached, 1, d);
+	window_set_parent(drawcalc_time_window, NULL, drawcalc_window, NULL);
 
-	window_register(1, drawcalc_window, NULL, RECTNAN, NULL, 5, d, &form_string, &form_ret, &calc_form_detached, &calc_var_detached);
+	window_register(1, drawcalc_window, NULL, RECTNAN, NULL, 6, d, &form_string, &form_ret, &calc_form_detached, &calc_var_detached, &calc_time_detached);
 }
 
 #ifndef DRAWCALC_AS_A_LIBRARY
