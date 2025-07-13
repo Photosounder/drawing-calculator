@@ -648,7 +648,7 @@ void drawing_calculator()
 				rect_t bounding_rect = make_rect_off(s->pos, mul_xy(xy(20., 1.), set_xy(s->scale * 6.)), xy(0.5, 0.));
 				if (check_box_on_screen(bounding_rect))
 				{
-					// Convert base54 values to string (base54 gives 9 chars in 52 bits, alternatives are bases 36 and 90)
+					// Convert base98 values to string (base98 gives 8 chars in 53 bits)
 					const int base = 98, char_count = 9;
 					const char base98[98] =
 						"\nabcdefghijklmnopqrstuvwxyz" " _\t"	// 1 = a, 26 = z
