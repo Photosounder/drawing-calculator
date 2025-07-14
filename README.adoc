@@ -162,14 +162,14 @@ if i_cond goto i_loop
 
 === Bubble universe
 
-Adapted from https://x.com/yuruyurau/status/1226846058728177665[this tweet]. Use `k0` to make time move forward (hold the Alt key to make it happen smoothly).
+Adapted from https://x.com/yuruyurau/status/1226846058728177665[this tweet]. Click "Animate" to animate it.
 
 image::screenshot3.png[screenshot3.png,align="center"]
 
 ```
 d num_curves = 512
 d iter = 400
-d t = k0
+d t = mul time 0.025
 d radm = 0.004
 d r = 2pi/235
 d tr = 1/(2pi)
@@ -211,16 +211,17 @@ if i_cond goto i_loop
 
 === Graphing calculator
 
-Naturally you can simply loop through a variable `x`, calculate a `y` from it, and for each iteration of `x` draw a circle at (`x`, `y`).
+Naturally you can simply loop through a variable `x`, calculate a `y` from it, and for each iteration of `x` draw a quadrilateral.
 
 image::screenshot4.png[screenshot4.png,align="center"]
 
 ```
-// Circle colour
-d m = 0.1
-d rb = mul m 0.1
-d g = mul m 0.8
+expr d r = colour(1/8, 1, 1/8)
+d th = .04   // half thickness of the curve
+d x_step = 0.005
 
+d x0 = 0/0
+d y0 = 0/0
 d x = -40
 loop_x:
   d y = 0
@@ -228,7 +229,7 @@ loop_x:
   // Loop through frequencies and sum them to y
   d freq = 0
   loop_freq:
-    expr y = y + cos_tr_d2(x*freq)*erfr(freq*k0-k1)
+    expr y = y + cos(2pi*x*freq)*erfr(freq*k0-k1)
   freq = add freq 0.01
   i c_freq = cmp freq < 0.5
   if c_freq goto loop_freq
@@ -236,10 +237,14 @@ loop_x:
   // Control vertical scale
   y = mul y 0.5
 
-  // Draw the circle
-  d v = colour rb g rb
-  v = circle x y .04
-x = add x 0.005
+  // Draw quad
+  i c = isnan y0
+  if c goto skip_drawing
+    expr r = quad(x0, y0+th, x, y+th, x, y-th, x0, y0-th, 0)
+  skip_drawing:
+  x0 = x
+  y0 = y
+x = add x x_step
 i c_x = cmp x < 40
 if c_x goto loop_x
 ```

@@ -165,7 +165,7 @@ size_t drawcalc_alloc_elem()
 		drawcalc_set_colour(1., 0.05, 0.);
 		drawcalc_add_line(-7., 0., 7., 0., 1.5);
 		drawcalc_set_colour(1., 0.7, 0.);
-		drawcalc_add_text(0., 0., 1.5, 9., 12568972350., 101543970348.);
+		drawcalc_add_text(0., 0., 1.5, 9., 245911947980., 3589306291512.);
 		return 0;
 	}
 
@@ -649,7 +649,7 @@ void drawing_calculator()
 				if (check_box_on_screen(bounding_rect))
 				{
 					// Convert base98 values to string (base98 gives 8 chars in 53 bits)
-					const int base = 98;
+					const int base = 98, char_count = 8;
 					const char base98[98] =
 						"\nabcdefghijklmnopqrstuvwxyz" " _\t"	// 1 = a, 26 = z
 						"0123456789"				// 30 = '0'
@@ -658,7 +658,7 @@ void drawing_calculator()
 						"\302\260'\"()[]{}"			// 80-81 = °, 82 = ", 83 = '
 						"#$&@\\^`~";				// 90-97
 
-					char string[9*2 + 1];
+					char string[8*2 + 1];
 					int iv, ic = 0;
 
 					for (iv=0; iv < TEXT_VAL_COUNT; iv++)
@@ -670,8 +670,15 @@ void drawing_calculator()
 							string[ic] = base98[v % base];
 							ic++;
 							v /= base;
+
+							if (ic >= 2*char_count)
+							{
+								ic = 2*char_count;
+								goto terminate_string;
+							}
 						}
 					}
+terminate_string:
 					string[ic] = '\0';
 
 					print_to_screen(s->pos, s->scale, frgb_to_col(s->col), 1., s->alig, "%s", string);
