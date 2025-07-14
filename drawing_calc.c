@@ -649,7 +649,7 @@ void drawing_calculator()
 				if (check_box_on_screen(bounding_rect))
 				{
 					// Convert base98 values to string (base98 gives 8 chars in 53 bits)
-					const int base = 98, char_count = 9;
+					const int base = 98;
 					const char base98[98] =
 						"\nabcdefghijklmnopqrstuvwxyz" " _\t"	// 1 = a, 26 = z
 						"0123456789"				// 30 = '0'
