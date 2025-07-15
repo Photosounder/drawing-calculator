@@ -263,7 +263,7 @@ i_loop:
 
   // Colours
   expr d red = (1-abs(cos_tr_d2(0.16 * t-0.25))) * m
-  expr d grn = (1-abs(cos_tr_d2(0.02 * t -0.25))) * (i/255)
+  expr d grn = (1-abs(cos_tr_d2(0.02 * t-0.25))) * (i/255)
   expr d blu = (1-abs(cos_tr_d2(0.15 * t-0.25))) * m
 
   // Draw palette
